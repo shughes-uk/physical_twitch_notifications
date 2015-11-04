@@ -1,9 +1,9 @@
 import math
-from time import time, sleep
 import phue
+from time import sleep
 from hue_helper import ColorHelper
-import logging, threading
-from wrapt import synchronized
+import logging
+import threading
 
 
 class Device(object):
@@ -12,6 +12,9 @@ class Device(object):
         super(Device, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.current_color = (0, 0, 0)
+        self.allowed_actions = []
+        self.lock = threading.Lock()
+        self.flashlock = threading.Lock()
 
     def start(self):
         raise Exception("Function not implemented, whoops")
@@ -61,6 +64,7 @@ class Hue(RGBLight):
     def __init__(self, ip):
         super(Hue, self).__init__()
         phue.logger.setLevel(logging.INFO)
+        self.allowed_actions = ["flash", "set_color"]
         self.bridge = phue.Bridge(ip=ip, config_file_path='.hue_config')
         self.current_phue_status = {}
         self.chelper = ColorHelper()
@@ -74,19 +78,19 @@ class Hue(RGBLight):
             return
         else:
             with self.flashlock:
-                #store the old states
+                # store the old states
                 old_colors = {}
                 for l in self.bridge.lights:
                     old_colors[l] = (l.xy, l.brightness)
                 try:
-                    #flash a bunch
+                    # flash a bunch
                     for x in range(ntimes):
                         self.set_color(rgb=color_1, brightness=254)
                         sleep(interval)
                         self.set_color(rgb=color_2, brightness=254)
                         sleep(interval)
                 finally:
-                    #reset to old states
+                    # reset to old states
                     sleep(0.3)
                     for l in self.bridge.lights:
                         while l.xy != old_colors[l][0]:
