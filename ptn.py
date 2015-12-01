@@ -11,10 +11,10 @@ logger = logging.getLogger("sub_alert")
 
 
 class ptn(object):
-
     def __init__(self):
         logger.info("Sub_alerter starting up")
-        subs = ['on_follower', 'on_subscriber', 'on_start_streaming', 'on_stop_streaming']
+        subs = ['on_follower', 'on_subscriber', 'on_start_streaming',
+                'on_stop_streaming']
         self.subscriptions = {}
         for sub in subs:
             self.subscriptions[sub] = []
@@ -29,14 +29,17 @@ class ptn(object):
         if os.path.isfile("config.txt"):
             # try:
             config = load(open("config.txt", 'r'))
-            self.load_twitchchat(config['twitch_username'], config['twitch_oauth'], config['twitch_channel'])
+            self.load_twitchchat(config['twitch_username'],
+                                 config['twitch_oauth'],
+                                 config['twitch_channel'])
             self.load_twitch_handler(config['twitch_channel'])
             self.load_devices(config['devices'])
             # except Exception, e:
             #     logger.critical("Problem loading configuration file, try deleting config.txt and starting again")
             #     raise e
         else:
-            logger.critical("config.txt doesn't exist, please create it, refer to config_example.txt for reference")
+            logger.critical(
+                "config.txt doesn't exist, please create it, refer to config_example.txt for reference")
             sys.exit()
         logger.info("Configuration loaded")
         return config
@@ -53,9 +56,11 @@ class ptn(object):
         if self.subscriptions['on_subscription']:
             self.twitchchat.subscribeNewSubscriber(self.on_subscriber)
         if self.subscriptions['on_start_streaming']:
-            self.twitchapi_handler.subscribe_streaming_start(self.started_streaming)
+            self.twitchapi_handler.subscribe_streaming_start(
+                self.started_streaming)
         if self.subscriptions['on_stop_streaming']:
-            self.twitchapi_handler.subscribe_streaming_stop(self.stopped_streaming)
+            self.twitchapi_handler.subscribe_streaming_stop(
+                self.stopped_streaming)
 
     def started_streaming(self, name):
         pass
@@ -80,25 +85,30 @@ class ptn(object):
         self.configure_subscriptions(kankunsocket, kankuncfg['subscriptions'])
 
     def configure_phue(self, phuecfg):
-        phue = Hue(phuecfg['ip'])
+        phue = Hue(phuecfg['ip'], phuecfg['hue_name'])
         self.configure_subscriptions(phue, phuecfg['subscriptions'])
 
     def configure_subscriptions(self, device, subcfg):
         for subscription in subcfg:
             if subscription == "on_subscriber":
-                self.subscriptions['on_subscriber'].append((device, subcfg[subscription]))
+                self.subscriptions['on_subscriber'].append((
+                    device, subcfg[subscription]))
             elif subscription == "on_follower":
-                self.subscriptions['on_follower'].append((device, subcfg[subscription]))
+                self.subscriptions['on_follower'].append((
+                    device, subcfg[subscription]))
             elif subscription == "on_start_streaming":
-                self.subscriptions['on_start_streaming'].append((device, subcfg[subscription]))
+                self.subscriptions['on_start_streaming'].append((
+                    device, subcfg[subscription]))
             elif subscription == "on_stop_streaming":
-                self.subscriptions['on_stop_streaming'].append((device, subcfg[subscription]))
+                self.subscriptions['on_stop_streaming'].append((
+                    device, subcfg[subscription]))
 
 # 'main'
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s.%(msecs)d %(levelname)s %(name)s : %(message)s",
-                        datefmt="%H:%M:%S")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s.%(msecs)d %(levelname)s %(name)s : %(message)s",
+        datefmt="%H:%M:%S")
     ptn = ptn()
     while True:
         pass
