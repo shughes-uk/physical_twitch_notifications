@@ -1,25 +1,73 @@
-#--------Twitch settings--------
+twitch_username : "collectablecat"  # Twitch.TV username for the bot, must be a registered username!
 
-# Twitch.TV username for the bot, must be a registered username!
-twitch_username : "your_username_here"
+twitch_oauth : "adsadas"  # OAuth for above Twitch.TV account, http://www.twitchapps.com/tmi/
 
-# Get your OAuth for above Twitch.TV account at http://www.twitchapps.com/tmi/
-twitch_oauth : "Your oauth in here!"
+twitch_channel : "ryonday"  # Twitch.TV channel to connect to
 
-# Twitch.TV channel to connect to ex: "#geekandsundry" for the geekandsundry channel
-twitch_channel : "#your_channel_here"
+devices :
+  lights_1 :
+    type : "hue"
+    hue_name : "roving"
+    ip : "192.168.1.211" # IP Address of the hue bridge
+    subscriptions :
+      on_start_streaming :
+        action :
+          flash :
+            color_1 : "blue" #any colors from http://www.cssportal.com/css3-color-names/
 
-#--------Hue Settings--------
+            color_2 : "red" #any colors from http://www.cssportal.com/css3-color-names/
 
-# IP Address of the  phillips hue bridge
-hue_bridge_ip : "192.168.1.211"
+            times_to_flash : 15 #number of times to flash between the colors
 
-# The colors to flash when it detects a new subscriber, any color name from http://www.cssportal.com/css3-color-names/ are valid
-color_1 : red
-color_2 : blue
+            flash_speed : .2 #1 is slow but safe, 0.1 is very fast but is maybe cause odd behavior
+      on_subscriber :
+        action :
+          flash :
+            color_1 : "blue" #any colors from http://www.cssportal.com/css3-color-names/
 
-# Number of times to flash between the colors
-times_to_flash : 10
+            color_2 : "red" #any colors from http://www.cssportal.com/css3-color-names/
 
-# The speed at which it flashes, flash_speed 1 is slow but safe, it can go down as low as 0.1 but may display weird behavior
-flash_speed : 1
+            times_to_flash : 15 #number of times to flash between the colors
+
+            flash_speed : .01 #1 is slow but safe, 0.1 is very fast but is maybe cause odd behavior
+      on_subscriber_count :
+        count : 10
+        triggered : false
+        action :
+          flash :
+            color_1 : "green"
+
+            color_2 : "pink"
+
+            times_to_flash : 15
+
+            flash_speed : .01
+      on_follower :
+        action :
+          flash :
+            color_1 : "red"
+            color_2 : "blue"
+            times_to_flash : 5
+            flash_speed : 1
+      on_follower_count :
+        triggered : false
+        count : 100
+        action :
+          flash :
+            color_1 : "pink"
+            color_2 : "green"
+            times_to_flash : 5
+            flash_speed : 1
+  plug_1 :
+    type : "kankun_plug_socket"
+    quick_name : "disco_lights_1"
+    ip : "192.168.1.254"
+    subscriptions :
+      on_subscriber :
+        action :
+          turn_on :
+            duration : 30 #seconds
+      on_follower :
+        action :
+          turn_on :
+            duration : 10
