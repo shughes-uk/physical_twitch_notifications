@@ -4,9 +4,10 @@ from time import sleep
 from hue_helper import ColorHelper
 import logging
 import threading
-
+import colorhelp
 
 class Device(object):
+
     def __init__(self):
         super(Device, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -22,6 +23,7 @@ class Device(object):
 
 
 class RGBLight(Device):
+
     @property
     def current_color():
         raise Exception("Current color not implemented")
@@ -29,15 +31,9 @@ class RGBLight(Device):
     def set_color(self, color):
         raise Exception("Function not implemented , whoops")
 
-    def flash(self,
-              color_1,
-              color_2,
-              ntimes=10,
-              interval=0.2,
-              nonblocking=False):
+    def flash(self, color_1, color_2, ntimes=10, interval=0.2, nonblocking=False):
         if nonblocking:
-            t = threading.Thread(target=self.flash,
-                                 args=(color_1, color_2, ntimes, interval))
+            t = threading.Thread(target=self.flash, args=(color_1, color_2, ntimes, interval))
             t.start()
             return
         else:
@@ -52,6 +48,7 @@ class RGBLight(Device):
 
 
 class PlugSocket(Device):
+
     def turn_on(self):
         raise Exception("Function not implemented , whoops")
 
@@ -60,14 +57,17 @@ class PlugSocket(Device):
 
 
 class KankunSocket(PlugSocket):
+
     def __init__(self, ip):
         super(KankunSocket, self).__init__()
 
 
 class Hue(RGBLight):
+
     def __init__(self, ip, name):
         super(Hue, self).__init__()
         phue.logger.setLevel(logging.INFO)
+        self.last_rgb = None
         self.allowed_actions = ["flash", "set_color"]
         self.bridge = phue.Bridge(ip=ip, config_file_path='.hue_config')
         self.current_phue_status = {}
@@ -83,18 +83,12 @@ class Hue(RGBLight):
 
     @property
     def current_color(self):
-        return self._XYtoRGB(self.light.xy[0], self.light.xy[1],
-                             self.light.brightness)
+        return colorhelp.colorFromXY(self.light.xy)
 
-    def flash(self,
-              color_1,
-              color_2,
-              ntimes=2,
-              interval=0.2,
-              nonblocking=False):
+
+    def flash(self, color_1, color_2, ntimes=2, interval=0.2, nonblocking=False):
         if nonblocking:
-            t = threading.Thread(target=self.flash,
-                                 args=(color_1, color_2, ntimes, interval))
+            t = threading.Thread(target=self.flash, args=(color_1, color_2, ntimes, interval))
             t.start()
             return
         else:
@@ -123,20 +117,6 @@ class Hue(RGBLight):
     def set_color(self, rgb=None, xy=None, brightness=None):
         with self.lock:
             self.light.transitiontime = 0
-            if rgb:
-                self.light.xy = self._RGBtoXY(rgb[0], rgb[1], rgb[2])
-            elif xy:
-                self.light.xy = xy
-            self.light.brightness = brightness or 254
-
-    def _enhancecolor(self, normalized):
-        if normalized > 0.04045:
-            return math.pow((normalized + 0.055) / (1.0 + 0.055), 2.4)
-        else:
-            return normalized / 12.92
-
-    def _XYtoRGB(self, x, y, brightness):
-        return self.chelper.getRGBFromXYAndBrightness(x, y, brightness)
-
-    def _RGBtoXY(self, r, g, b):
-        return self.chelper.getXYPointFromRGB(r, g, b)
+            x,y= colorhelp.calculateXY(rgb[0], rgb[1], rgb[2])
+            self.light.xy = (x,y)
+            self.light.brightness = 254
