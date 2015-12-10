@@ -116,6 +116,12 @@ class BlinkyTape(object):
         self.serial.flush()
         self.serial.flushInput()  # Clear responses from BlinkyTape, if any
         self.position = 0
+        
+    def displayWave(self, r,g,b):
+        """Fills [ledCount] pixels with RGB color and shows it."""
+        for i in range(0, self.ledCount):
+            self.sendPixel(r, g, b)
+        self.show()
 
     def displayColor(self, r, g, b):
         """Fills [ledCount] pixels with RGB color and shows it."""

@@ -68,9 +68,11 @@ class ptn(object):
         return config
 
     def load_twitcher(self, channel):
+        logger.info("Loading twitcher for {0}".format(channel))
         self.twitcher = twitcher([channel])
 
     def load_twitchchat(self, username, oauth, channel):
+        logger.info("Loading twitchchat for {0} and channel {1}".format(username,channel))
         self.twitchchat = twitch_chat(username, oauth, [channel])
 
     def setup_subscriptions(self):
@@ -107,6 +109,12 @@ class ptn(object):
             f_config = cfg['action']['turn_off_timer']
             duration = f_config['duration']
             device.turn_off_timer(duration)
+        elif cfg['action'].keys()[0] == 'light_wave':
+            lw_config = cfg['action']['light_wave']
+            c1 = webcolors.name_to_rgb(lw_config['color_1'])
+            c2 = webcolors.name_to_rgb(lw_config['color_2'])
+            duration = lw_config['duration']
+            device.light_wave(c1, c2, duration)
 
     def started_streaming(self, streamer_name):
         for device, cfg in self.subscriptions['on_start_streaming']:
