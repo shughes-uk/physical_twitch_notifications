@@ -217,7 +217,6 @@ class Hue(RGBLight):
         super(Hue, self).__init__()
         phue.logger.setLevel(logging.INFO)
         self.bridge = phue.Bridge(ip=ip, config_file_path='.hue_config')
-        self.chelper = ColorHelper()
         self.light = None
         self.bridge.get_light_objects(mode='id')
         for light in self.bridge.lights_by_id.values():
