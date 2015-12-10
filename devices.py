@@ -7,7 +7,7 @@ import colorhelp
 import urllib
 import json
 import blinkytape
-
+from datetime import timedelta, datetime
 RGB_OFF = (0, 0, 0)
 
 
@@ -174,6 +174,34 @@ class BlinkyTape(RGBLight):
         self.c_color = (0, 0, 0)
         self.set_color(RGB_OFF)
 
+    def light_wave(self, color1, color2, duration):
+        self.queue_action(self.do_light_wave, color1, color2, duration)
+
+    @pop_action
+    def do_light_wave(self, color1, color2, duration):
+        with self.lock:
+            stoptime = datetime.now() + timedelta(seconds=duration)
+            c1_pcount = 60
+            c2_pcount = 0
+            reverse = False
+            while datetime.now() < stoptime:
+                for x in range(c1_pcount):
+                    self.btape.sendPixel(color1[0], color1[1], color1[2])
+                for x in range(c2_pcount):
+                    self.btape.sendPixel(color2[0], color2[1], color2[2])
+                self.btape.show()
+                if c2_pcount == 60:
+                    reverse = True
+                elif c1_pcount == 60:
+                    reverse = False
+                if reverse:
+                    c2_pcount -= 1
+                    c1_pcount += 1
+                else:
+                    c2_pcount += 1
+                    c1_pcount -= 1
+            self.btape.displayColor(self.c_color[0], self.c_color[1], self.c_color[2])
+
     @property
     def current_color(self):
         return self.c_color
@@ -211,6 +239,7 @@ class Hue(RGBLight):
             old_rgb = self.current_color
             old_brightness = self.light.brightness
             try:
+                self.logger.debug("Flashing")
                 # flash a bunch
                 for x in range(ntimes):
                     self._set_color(rgb=color_1, brightness=254)
@@ -219,8 +248,11 @@ class Hue(RGBLight):
                     sleep(interval)
             finally:
                 # reset to old states
-                sleep(0.3)
-                self._set_color(rgb=old_rgb, brightness=old_brightness)
+                self.logger.debug("Attempting reset to old state rgb :{0}, brightness:{1}".format(old_rgb,
+                                                                                                  old_brightness))
+                while self.current_color != old_rgb:
+                    sleep(0.3)
+                    self._set_color(rgb=old_rgb, brightness=old_brightness)
 
     def start(self):
         pass
