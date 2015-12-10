@@ -1,6 +1,5 @@
 import phue
 from time import sleep
-from hue_helper import ColorHelper
 import logging
 import threading
 import colorhelp
