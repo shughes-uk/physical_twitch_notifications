@@ -83,9 +83,6 @@ def calculateXY(r, g, b):
         xy[1] = 0.0
     xyPoint = PointF(xy[0], xy[1])
     colorPoints = []
-    # colorPoints.append( PointF(1.0, 0.0))
-    # colorPoints.append( PointF(0.0, 1.0))
-    # colorPoints.append( PointF(0.0, 0.0))
     colorPoints.append(PointF(0.674, 0.322))
     colorPoints.append(PointF(0.408, 0.517))
     colorPoints.append(PointF(0.168, 0.041))
@@ -115,9 +112,6 @@ def calculateXY(r, g, b):
 def colorFromXY(points):
     xy = PointF(points[0], points[1])
     colorPoints = []
-    # colorPoints.append( PointF(1.0, 0.0))
-    # colorPoints.append( PointF(0.0, 1.0))
-    # colorPoints.append( PointF(0.0, 0.0))
     colorPoints.append(PointF(0.674, 0.322))
     colorPoints.append(PointF(0.408, 0.517))
     colorPoints.append(PointF(0.168, 0.041))

@@ -1,19 +1,24 @@
-import math
 import phue
 from time import sleep
 from hue_helper import ColorHelper
 import logging
 import threading
 import colorhelp
+import urllib
+import json
+import blinkytape
+
+RGB_OFF = (0, 0, 0)
+
 
 class Device(object):
 
     def __init__(self):
         super(Device, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.allowed_actions = []
+        self.action_queue = []
+        self.action_thread = None
         self.lock = threading.Lock()
-        self.flashlock = threading.Lock()
 
     def start(self):
         raise Exception("Function not implemented, whoops")
@@ -21,30 +26,26 @@ class Device(object):
     def stop(self):
         raise Exception("Function not implemented, whoops")
 
-
-class RGBLight(Device):
-
-    @property
-    def current_color():
-        raise Exception("Current color not implemented")
-
-    def set_color(self, color):
-        raise Exception("Function not implemented , whoops")
-
-    def flash(self, color_1, color_2, ntimes=10, interval=0.2, nonblocking=False):
-        if nonblocking:
-            t = threading.Thread(target=self.flash, args=(color_1, color_2, ntimes, interval))
-            t.start()
-            return
+    def queue_action(self, target, *args):
+        if self.action_thread:
+            self.action_queue.append(threading.Thread(target=target, args=args))
         else:
-            with self.flashlock:
-                old_color = self.current_color
-                for x in range(ntimes):
-                    self.set_color(color_1)
-                    sleep(interval)
-                    self.set_color(color_2)
-                    sleep(interval)
-                self.set_color(old_color)
+            self.action_thread = threading.Thread(target=target, args=args)
+            self.action_thread.start()
+
+
+def pop_action(f):
+
+    def wrapper(self, *args, **kwargs):
+        self.logger.debug("Calling {0}".format(f.__name__))
+        f(self, *args, **kwargs)
+        if self.action_queue:
+            self.action_thread = self.action_queue.pop(0)
+            self.action_thread.start()
+        else:
+            self.action_thread = None
+
+    return wrapper
 
 
 class PlugSocket(Device):
@@ -60,6 +61,127 @@ class KankunSocket(PlugSocket):
 
     def __init__(self, ip):
         super(KankunSocket, self).__init__()
+        self.ip = ip
+        self.timer = threading.Timer(10, self.turn_on)
+
+    @property
+    def on_status(self):
+        url = "http://{0}/cgi-bin/json.cgi?get=state".format(self.ip)
+        response = urllib.urlopen(url)
+        data = json.load(response)
+        if data['state'] == 'on':
+            return True
+        else:
+            return False
+
+    def _turn_on(self):
+        if not self.on_status:
+            self.logger.info("Socket[{0}] turning on".format(self.ip))
+            url = "http://{0}/cgi-bin/json.cgi?set=on".format(self.ip)
+            urllib.urlopen(url)
+
+    def _turn_off(self):
+        if self.on_status:
+            self.logger.info("Socket[{0}] turning off".format(self.ip))
+            url = "http://{0}/cgi-bin/json.cgi?set=off".format(self.ip)
+            urllib.urlopen(url)
+
+    def turn_on(self):
+        self.queue_action(self.do_turn_on)
+
+    @pop_action
+    def do_turn_on(self):
+        self._turn_on()
+
+    def turn_off(self):
+        self.queue_action(self.do_turn_off)
+
+    @pop_action
+    def do_turn_off(self):
+        self._turn_off()
+
+    def turn_off_timer(self, duration):
+        self.queue_action(self.do_turn_off_timer, duration)
+
+    def do_turn_off_timer(self, duration):
+        if self.timer.is_alive():
+            self.timer.cancel()
+        self.timer = threading.Timer(duration, self.turn_on_callback)
+        self.timer.daemon = True
+        self.timer.start()
+        self.do_turn_off()
+
+    @pop_action
+    def turn_on_callback(self):
+        self.do_turn_on()
+
+    def turn_on_timer(self, duration):
+        self.queue_action(self.do_turn_on_timer, duration)
+
+    def do_turn_on_timer(self, duration):
+        if self.timer.is_alive():
+            self.timer.cancel()
+        self.timer = threading.Timer(duration, self.turn_off_callback)
+        self.timer.daemon = True
+        self.timer.start()
+        self.do_turn_on()
+
+    @pop_action
+    def turn_off_callback(self):
+        self.do_turn_off()
+
+
+class RGBLight(Device):
+
+    def __init__(self):
+        super(RGBLight, self).__init__()
+        self.flashlock = threading.Lock()
+
+    @property
+    def current_color():
+        raise Exception("Current color not implemented")
+
+    def _set_color():
+        raise Exception("Set color not implemented")
+
+    def set_color(self, color):
+        self.queue_action(self.do_set_color, color)
+
+    @pop_action
+    def do_set_color(self, color):
+        self._set_color(color)
+
+    def flash(self, color_1, color_2, ntimes=10, interval=0.2):
+        self.queue_action(self.do_flash, color_1, color_2, ntimes, interval)
+
+    @pop_action
+    def do_flash(self, color_1, color_2, ntimes=10, interval=0.2):
+        with self.flashlock:
+            old_color = self.current_color
+            for x in range(ntimes):
+                self._set_color(color_1)
+                sleep(interval)
+                self._set_color(color_2)
+                sleep(interval)
+            self._set_color(old_color)
+
+
+class BlinkyTape(RGBLight):
+
+    def __init__(self, port):
+        super(BlinkyTape, self).__init__()
+        self.btape = blinkytape.BlinkyTape(port)
+        self.c_color = (0, 0, 0)
+        self.set_color(RGB_OFF)
+
+    @property
+    def current_color(self):
+        return self.c_color
+
+    def _set_color(self, rgb):
+        with self.lock:
+            self.btape.displayColor(rgb[0], rgb[1], rgb[2])
+            self.c_color = rgb
 
 
 class Hue(RGBLight):
@@ -67,10 +189,7 @@ class Hue(RGBLight):
     def __init__(self, ip, name):
         super(Hue, self).__init__()
         phue.logger.setLevel(logging.INFO)
-        self.last_rgb = None
-        self.allowed_actions = ["flash", "set_color"]
         self.bridge = phue.Bridge(ip=ip, config_file_path='.hue_config')
-        self.current_phue_status = {}
         self.chelper = ColorHelper()
         self.light = None
         self.bridge.get_light_objects(mode='id')
@@ -85,28 +204,23 @@ class Hue(RGBLight):
     def current_color(self):
         return colorhelp.colorFromXY(self.light.xy)
 
-
-    def flash(self, color_1, color_2, ntimes=2, interval=0.2, nonblocking=False):
-        if nonblocking:
-            t = threading.Thread(target=self.flash, args=(color_1, color_2, ntimes, interval))
-            t.start()
-            return
-        else:
-            with self.flashlock:
-                # store the old state
-                old_rgb = self.current_color
-                old_brightness = self.light.brightness
-                try:
-                    # flash a bunch
-                    for x in range(ntimes):
-                        self.set_color(rgb=color_1, brightness=254)
-                        sleep(interval)
-                        self.set_color(rgb=color_2, brightness=254)
-                        sleep(interval)
-                finally:
-                    # reset to old states
-                    sleep(0.3)
-                    self.set_color(rgb=old_rgb, brightness=old_brightness)
+    @pop_action
+    def do_flash(self, color_1, color_2, ntimes=2, interval=0.2):
+        with self.flashlock:
+            # store the old state
+            old_rgb = self.current_color
+            old_brightness = self.light.brightness
+            try:
+                # flash a bunch
+                for x in range(ntimes):
+                    self._set_color(rgb=color_1, brightness=254)
+                    sleep(interval)
+                    self._set_color(rgb=color_2, brightness=254)
+                    sleep(interval)
+            finally:
+                # reset to old states
+                sleep(0.3)
+                self._set_color(rgb=old_rgb, brightness=old_brightness)
 
     def start(self):
         pass
@@ -114,9 +228,9 @@ class Hue(RGBLight):
     def stop(self):
         pass
 
-    def set_color(self, rgb=None, xy=None, brightness=None):
+    def _set_color(self, rgb=None, xy=None, brightness=None):
         with self.lock:
             self.light.transitiontime = 0
-            x,y= colorhelp.calculateXY(rgb[0], rgb[1], rgb[2])
-            self.light.xy = (x,y)
+            x, y = colorhelp.calculateXY(rgb[0], rgb[1], rgb[2])
+            self.light.xy = (x, y)
             self.light.brightness = 254
