@@ -180,25 +180,16 @@ class BlinkyTape(RGBLight):
     def do_light_wave(self, color1, color2, duration):
         with self.lock:
             stoptime = datetime.now() + timedelta(seconds=duration)
-            c1_pcount = 60
-            c2_pcount = 0
-            reverse = False
+            colorarray = [True] * 60
+            colorarray.extend([False] * 60)
             while datetime.now() < stoptime:
-                for x in range(c1_pcount):
-                    self.btape.sendPixel(color1[0], color1[1], color1[2])
-                for x in range(c2_pcount):
-                    self.btape.sendPixel(color2[0], color2[1], color2[2])
+                for x in range(60):
+                    if colorarray[x]:
+                        self.btape.sendPixel(color1[0], color1[1], color1[2])
+                    else:
+                        self.btape.sendPixel(color2[0], color2[1], color2[2])
+                colorarray.insert(0, colorarray.pop())
                 self.btape.show()
-                if c2_pcount == 60:
-                    reverse = True
-                elif c1_pcount == 60:
-                    reverse = False
-                if reverse:
-                    c2_pcount -= 1
-                    c1_pcount += 1
-                else:
-                    c2_pcount += 1
-                    c1_pcount -= 1
             self.btape.displayColor(self.c_color[0], self.c_color[1], self.c_color[2])
 
     @property
