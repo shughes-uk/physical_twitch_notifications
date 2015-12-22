@@ -27,9 +27,12 @@ class Device(object):
 
     def queue_action(self, target, *args):
         if self.action_thread:
-            self.action_queue.append(threading.Thread(target=target, args=args))
+            thread = threading.Thread(target=target, args=args)
+            thread.daemon = True
+            self.action_queue.append(thread)
         else:
             self.action_thread = threading.Thread(target=target, args=args)
+            self.action_thread.daemon = True
             self.action_thread.start()
 
 
@@ -216,6 +219,8 @@ class Hue(RGBLight):
                 break
         if not self.light:
             raise Exception("Light with id {0} not found".format(name))
+        self.timer = threading.Timer(None, 1)
+        self.timer.daemon = True
 
     @property
     def current_color(self):
@@ -243,15 +248,30 @@ class Hue(RGBLight):
                     sleep(0.3)
                     self._set_color(rgb=old_rgb, brightness=old_brightness)
 
-    def start(self):
-        pass
+    def temp_set_color(self, color, duration):
+        self.queue_action(self.do_temp_set_color, color, duration)
 
-    def stop(self):
-        pass
+    def do_temp_set_color(self, color, duration):
+        if self.timer.is_alive():
+            self.timer.cancel()
+        self.timer = threading.Timer(duration, self.reset_color)
+        self.timer.daemon = True
+        self.previous_color = self.current_color
+        self._set_color(color)
+        self.timer.start()
+
+    @pop_action
+    def reset_color(self):
+        self._set_color(self.previous_color)
 
     def _set_color(self, rgb=None, xy=None, brightness=None):
         with self.lock:
             self.light.transitiontime = 0
+            if rgb == (0, 0, 0):
+                self.light.on = False
+                return
+            if not self.light.on:
+                self.light.on = True
             x, y = colorhelp.calculateXY(rgb[0], rgb[1], rgb[2])
             self.light.xy = (x, y)
             self.light.brightness = 254
