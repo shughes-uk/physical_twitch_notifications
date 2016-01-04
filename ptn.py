@@ -8,7 +8,7 @@ from devices import Hue, KankunSocket, BlinkyTape
 from yaml import load
 from pprint import pformat
 from twitchchat import twitch_chat
-from twitcher import twitcher
+from twitchevents import twitchevents
 import json
 import urllib
 logger = logging.getLogger("ptn")
@@ -25,7 +25,7 @@ class ptn(object):
         subs = ['on_follower', 'on_subscriber', 'on_start_streaming', 'on_stop_streaming', 'on_follower_count',
                 'on_subscriber_count']
         self.twitchchat = None
-        self.twitcher = None
+        self.twitchevents = None
         self.test_mode = test
         self.subscriptions = {}
         for sub in subs:
@@ -36,14 +36,14 @@ class ptn(object):
     def start(self):
         if self.twitchchat:
             self.twitchchat.start()
-        if self.twitcher:
-            self.twitcher.start()
+        if self.twitchevents:
+            self.twitchevents.start()
 
     def stop(self):
         if self.twitchchat:
             self.twitchchat.stop()
-        if self.twitcher:
-            self.twitcher.stop()
+        if self.twitchevents:
+            self.twitchevents.stop()
 
     def loadconfig(self):
         logger.info("Loading configuration from config.txt")
@@ -53,12 +53,12 @@ class ptn(object):
             if self.test_mode:
                 from twitch.api import v3 as twitch
                 featured_stream = twitch.streams.featured(limit=1)['featured'][0]
-                self.load_twitcher(featured_stream['stream']['channel']['name'])
+                self.load_twitchevents(featured_stream['stream']['channel']['name'])
                 self.load_twitchchat(config['twitch_username'], config['twitch_chat_oauth'],
                                      featured_stream['stream']['channel']['name'])
             else:
                 self.load_twitchchat(config['twitch_username'], config['twitch_chat_oauth'], config['twitch_channel'])
-                self.load_twitcher(config['twitch_channel'])
+                self.load_twitchevents(config['twitch_channel'])
             self.load_devices(config['devices'])
             self.setup_subscriptions()
         else:
@@ -67,9 +67,9 @@ class ptn(object):
         logger.info("Configuration loaded")
         return config
 
-    def load_twitcher(self, channel):
-        logger.info("Loading twitcher for {0}".format(channel))
-        self.twitcher = twitcher([channel])
+    def load_twitchevents(self, channel):
+        logger.info("Loading twitchevents for {0}".format(channel))
+        self.twitchevents = twitchevents([channel])
 
     def load_twitchchat(self, username, oauth, channel):
         logger.info("Loading twitchchat for {0} and channel {1}".format(username,channel))
@@ -77,13 +77,13 @@ class ptn(object):
 
     def setup_subscriptions(self):
         if self.subscriptions['on_follower'] or self.subscriptions['on_follower_count']:
-            self.twitcher.subscribe_new_follow(self.on_follower)
+            self.twitchevents.subscribe_new_follow(self.on_follower)
         if self.subscriptions['on_subscriber'] or self.subscriptions['on_subscriber_count']:
             self.twitchchat.subscribeNewSubscriber(self.on_subscriber)
         if self.subscriptions['on_start_streaming']:
-            self.twitcher.subscribe_streaming_start(self.started_streaming)
+            self.twitchevents.subscribe_streaming_start(self.started_streaming)
         if self.subscriptions['on_stop_streaming']:
-            self.twitcher.subscribe_streaming_stop(self.stopped_streaming)
+            self.twitchevents.subscribe_streaming_stop(self.stopped_streaming)
 
     def handle_action(self, device, cfg):
         if cfg['action'].keys()[0] == 'flash':
