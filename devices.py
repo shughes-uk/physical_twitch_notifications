@@ -201,11 +201,12 @@ class BlinkyTape(RGBLight):
     @pop_action
     def do_lightning(self, duration_ms):
         with self.lock:
+            old_color = self.current_color
             sleep(0.5)
             end = datetime.now() + timedelta(milliseconds=duration_ms)
             while end > datetime.now():
                 self.slope(rise=bool(random.getrandbits(1)), duration_seconds=random.randint(1, 100) / 1000.0)
-            self.btape.displayColor(0, 0, 0)
+            self.btape.displayColor(old_color[0], old_color[1], old_color[2])
 
     def light_wave(self, color1, color2, duration):
         self.queue_action(self.do_light_wave, color1, color2, duration)
