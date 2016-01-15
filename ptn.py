@@ -90,7 +90,6 @@ class ptn(object):
             self.twitchevents.subscribe_streaming_stop(self.stopped_streaming)
 
     def handle_action(self, device, cfg):
-        logger.info(pformat(cfg))
         for key , value in cfg['action'].iteritems():
             if key == 'flash':
                 c1 = webcolors.name_to_rgb(value['color_1'])
