@@ -1,12 +1,16 @@
-import phue
-from time import sleep
-import logging
-import threading
-import colorhelp
-import urllib
 import json
+import logging
+import random
+import threading
+import urllib
+from datetime import datetime, timedelta
+from time import sleep
+
+import phue
+
 import blinkytape
-from datetime import timedelta, datetime
+import colorhelp
+
 RGB_OFF = (0, 0, 0)
 
 
@@ -176,6 +180,33 @@ class BlinkyTape(RGBLight):
         self.c_color = (0, 0, 0)
         self.set_color(RGB_OFF)
 
+    def lightning(self, duration_ms):
+        self.queue_action(self.do_lightning, duration_ms)
+
+    def slope(self, rise, duration_seconds):
+        # work out x increase per 50 ms
+        x_inc = (255.0 / duration_seconds) / 100.0 * 5.0
+        if rise:
+            x = 0
+        else:
+            x = 255
+        while x <= 255 and x >= 0:
+            self.btape.displayColor(int(x), int(x), int(x))
+            if rise:
+                x += x_inc
+            else:
+                x -= x_inc
+            sleep(0.05)
+
+    @pop_action
+    def do_lightning(self, duration_ms):
+        with self.lock:
+            sleep(0.5)
+            end = datetime.now() + timedelta(milliseconds=duration_ms)
+            while end > datetime.now():
+                self.slope(rise=bool(random.getrandbits(1)), duration_seconds=random.randint(1, 100) / 1000.0)
+            self.btape.displayColor(0, 0, 0)
+
     def light_wave(self, color1, color2, duration):
         self.queue_action(self.do_light_wave, color1, color2, duration)
 
@@ -263,6 +294,44 @@ class Hue(RGBLight):
     @pop_action
     def reset_color(self):
         self._set_color(self.previous_color)
+
+    def lightning(self, duration):
+        self.queue_action(self.do_lightning)
+
+    @pop_action
+    def do_lightning(self):
+        old_color = self.current_color
+        old_brightness = self.light.brightness
+        old_on = self.light.on
+        x, y = colorhelp.calculateXY(1, 1, 1)
+        self.light.transitiontime = 0
+        self.light.brightness = 255
+        self.light.on = False
+        sleep(0.2)
+        self.light.transitiontime = 0
+        self.light.on = True
+        sleep(0.2)
+        self.light.transitiontime = 0
+        self.light.on = False
+        sleep(0.2)
+        self.light.transitiontime = 0
+        self.light.on = True
+        sleep(0.2)
+        self.light.transitiontime = 0
+        self.light.on = True
+        sleep(0.2)
+        self.light.transitiontime = 0
+        self.light.on = False
+        sleep(0.2)
+        self.light.transitiontime = 0
+        self.light.on = True
+        sleep(0.2)
+        self.light.on = False
+
+        sleep(4)
+        self.light.on = old_on
+        self._set_color(old_color)
+        self.light.brightness = old_brightness
 
     def _set_color(self, rgb=None, xy=None, brightness=None):
         with self.lock:

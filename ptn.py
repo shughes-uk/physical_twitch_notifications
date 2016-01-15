@@ -1,16 +1,20 @@
+import argparse
+import json
 import logging
 import os
-import time
 import sys
-import argparse
-import webcolors
-from devices import Hue, KankunSocket, BlinkyTape
-from yaml import load
+import time
+import urllib
 from pprint import pformat
+
+import webcolors
+from yaml import load
+
+import winsound
+from devices import BlinkyTape, Hue, KankunSocket
 from twitchchat import twitch_chat
 from twitchevents import twitchevents
-import json
-import urllib
+
 logger = logging.getLogger("ptn")
 twitch_log = logging.getLogger('twitch')
 twitch_log.setLevel(logging.CRITICAL)
@@ -72,7 +76,7 @@ class ptn(object):
         self.twitchevents = twitchevents([channel])
 
     def load_twitchchat(self, username, oauth, channel):
-        logger.info("Loading twitchchat for {0} and channel {1}".format(username,channel))
+        logger.info("Loading twitchchat for {0} and channel {1}".format(username, channel))
         self.twitchchat = twitch_chat(username, oauth, [channel])
 
     def setup_subscriptions(self):
@@ -86,35 +90,37 @@ class ptn(object):
             self.twitchevents.subscribe_streaming_stop(self.stopped_streaming)
 
     def handle_action(self, device, cfg):
-        if cfg['action'].keys()[0] == 'flash':
-            f_config = cfg['action']['flash']
-            c1 = webcolors.name_to_rgb(f_config['color_1'])
-            c2 = webcolors.name_to_rgb(f_config['color_2'])
-            count = f_config['times_to_flash']
-            speed = f_config['flash_speed']
-            device.flash(c1, c2, count, speed)
-        elif cfg['action'].keys()[0] == 'set_color':
-            f_config = cfg['action']['set_color']
-            c1 = webcolors.name_to_rgb(f_config['color'])
-            device.set_color(c1)
-        elif cfg['action'].keys()[0] == 'turn_on':
-            device.turn_on()
-        elif cfg['action'].keys()[0] == 'turn_off':
-            device.turn_off()
-        elif cfg['action'].keys()[0] == 'turn_on_timer':
-            f_config = cfg['action']['turn_on_timer']
-            duration = f_config['duration']
-            device.turn_on_timer(duration)
-        elif cfg['action'].keys()[0] == 'turn_off_timer':
-            f_config = cfg['action']['turn_off_timer']
-            duration = f_config['duration']
-            device.turn_off_timer(duration)
-        elif cfg['action'].keys()[0] == 'light_wave':
-            lw_config = cfg['action']['light_wave']
-            c1 = webcolors.name_to_rgb(lw_config['color_1'])
-            c2 = webcolors.name_to_rgb(lw_config['color_2'])
-            duration = lw_config['duration']
-            device.light_wave(c1, c2, duration)
+        logger.info(pformat(cfg))
+        for key , value in cfg['action'].iteritems():
+            if key == 'flash':
+                c1 = webcolors.name_to_rgb(value['color_1'])
+                c2 = webcolors.name_to_rgb(value['color_2'])
+                count = value['times_to_flash']
+                speed = value['flash_speed']
+                device.flash(c1, c2, count, speed)
+            elif key == 'set_color':
+                c1 = webcolors.name_to_rgb(value['color'])
+                device.set_color(c1)
+            elif key == 'turn_on':
+                device.turn_on()
+            elif key == 'turn_off':
+                device.turn_off()
+            elif key == 'turn_on_timer':
+                duration = value['duration']
+                device.turn_on_timer(duration)
+            elif key == 'turn_off_timer':
+                duration = value['duration']
+                device.turn_off_timer(duration)
+            elif key == 'light_wave':
+                c1 = webcolors.name_to_rgb(value['color_1'])
+                c2 = webcolors.name_to_rgb(value['color_2'])
+                duration = value['duration']
+                device.light_wave(c1, c2, duration)
+            elif key == 'lightning':
+                device.lightning(1500)
+            elif key == 'play_sound':
+                sound_fn = value['sound_wav']
+                winsound.PlaySound(sound_fn, winsound.SND_FILENAME | winsound.SND_ASYNC)
 
     def started_streaming(self, streamer_name):
         for device, cfg in self.subscriptions['on_start_streaming']:

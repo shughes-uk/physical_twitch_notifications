@@ -8,10 +8,11 @@
   over serial communication is impossible.
 """
 
-import serial
-
 # For Python3 support- always run strings through a bytes converter
 import sys
+
+import serial
+
 if sys.version_info < (3,):
 
     def encode(x):
