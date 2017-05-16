@@ -1,9 +1,10 @@
 twitch_username : "collectablecat"  # Twitch.TV username for the bot, must be a registered username!
 
-twitch_oauth : "adsadas"  # OAuth for above Twitch.TV account, http://www.twitchapps.com/tmi/
+twitch_chat_oauth : "oauth:adsadas"  # OAuth for above Twitch.TV account, http://www.twitchapps.com/tmi/
 
 twitch_channel : "ryonday"  # Twitch.TV channel to connect to
 
+twitch_client_id : "boop" # https://blog.twitch.tv/client-id-required-for-kraken-api-calls-afbb8e95f843
 devices :
   lights_1 :
     type : "hue"

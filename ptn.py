@@ -10,7 +10,7 @@ from pprint import pformat
 import webcolors
 from yaml import load
 
-import winsound
+#import winsound
 from devices import BlinkyTape, Hue, KankunSocket
 from twitchchat import twitch_chat
 from twitchevents import twitchevents
@@ -59,9 +59,9 @@ class ptn(object):
                 featured_stream = twitch.streams.featured(limit=1)['featured'][0]
                 self.load_twitchevents(featured_stream['stream']['channel']['name'])
                 self.load_twitchchat(config['twitch_username'], config['twitch_chat_oauth'],
-                                     featured_stream['stream']['channel']['name'])
+                                     featured_stream['stream']['channel']['name'], config['twitch_client_id'])
             else:
-                self.load_twitchchat(config['twitch_username'], config['twitch_chat_oauth'], config['twitch_channel'])
+                self.load_twitchchat(config['twitch_username'], config['twitch_chat_oauth'], config['twitch_channel'], config['twitch_client_id'])
                 self.load_twitchevents(config['twitch_channel'])
             self.load_devices(config['devices'])
             self.setup_subscriptions()
@@ -75,9 +75,9 @@ class ptn(object):
         logger.info("Loading twitchevents for {0}".format(channel))
         self.twitchevents = twitchevents([channel])
 
-    def load_twitchchat(self, username, oauth, channel):
+    def load_twitchchat(self, username, oauth, channel, client_id):
         logger.info("Loading twitchchat for {0} and channel {1}".format(username, channel))
-        self.twitchchat = twitch_chat(username, oauth, [channel])
+        self.twitchchat = twitch_chat(username, oauth, [channel], client_id)
 
     def setup_subscriptions(self):
         if self.subscriptions['on_follower'] or self.subscriptions['on_follower_count']:
